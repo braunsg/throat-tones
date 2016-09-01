@@ -1,0 +1,845 @@
+<!--
+
+#throat-tones
+http://www.github.com/brauns/throat-tones
+Created by: Steven Braun
+2016-09-01
+
+Full source code for the Throat Tones project, available for viewing at http://www.stevengbraun.com/dev/throat-tones
+
+LICENSE
+
+This source code is freely distributable under an MIT permissive license.
+
+-->
+
+
+<!DOCTYPE html>
+<head>
+	<title>Throat Tones: Vowels and Pitch in the Music of Sia and Adele</title>
+	<meta property="og:title" content="Throat Tones: Vowels and Pitch in the Music of Sia and Adele" />	
+	<meta property="og:image" content="http://www.stevengbraun.com/dev/throat-tones/screenshots/throat-tones_1.jpg" />	
+	<meta charset="UTF-8">
+
+	<script src="lib/d3.v4.js"></script>
+	<script src="lib/jquery-3.0.0.min.js"></script>
+	<style>
+	
+		@import 'https://fonts.googleapis.com/css?family=Crimson+Text:400,400i|Source+Sans+Pro:300,600';
+
+		html, body {
+			width: 100%;
+			height: 100vh;
+			margin: 0px;
+			padding: 0px;
+			
+		}
+			
+		#wrapper {
+			width: 100%;
+			height: 100%;
+			display: flex:
+			flex-direction: column;
+			margin: 0px;
+			padding: 0px;
+		}	
+		
+		#header {
+			width: 100%;
+			margin: 0px 0px 0px 0px;
+			padding: 25px;
+			cursor: default;
+			border-bottom: 1px solid burlywood;
+			box-sizing: border-box;
+				-webkit-box-sizing: border-box;
+				-moz-box-sizing: border-box;
+		}
+		
+		
+		#vis_container,
+		#subvis_container,
+		#nav_container,
+		#lyrics_container {
+			width: 100%;
+			max-height: 1000px;
+			margin: 0px;
+			padding: 0px;
+			overflow-x: scroll;
+			box-sizing: border-box;
+				-webkit-box-sizing: border-box;
+				-moz-box-sizing: border-box;
+		}		
+
+		#vis_container {
+			min-height: 100vh;
+		}		
+		
+		#subvis_container {
+			height: 250px;
+			overflow-y: hidden;
+		}
+
+		#lyrics_container {
+			display: flex;
+			font-family: Helvetica,Arial, sans-serif;
+			color: #FFFFFF;
+			background: #234363;
+			font-size:0.8em;
+			padding: 25px;
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+		}
+		
+		.lyric_block {
+			margin: 0px;
+			padding: 15px;
+			line-height: 1.4em;
+			width: 200px;
+			
+		}
+		
+		#nav_container {
+			height: 50px;
+			border-top: 1px solid #CECECE;
+			border-bottom: 1px solid #CECECE;
+			display: flex;
+			overflow-y: hidden;
+			justify-content: center;
+		}
+		
+		.nav_item {
+			margin: 0px;
+			padding: 2px;
+			text-align: center;
+			box-sizing: border-box;
+				-webkit-box-sizing: border-box;
+				-moz-box-sizing: border-box;
+		}
+		
+		.content_container {
+			position: relative;
+			z-index: 100;
+			display: flex;
+			width: 100%;
+			flex-direction: column;
+			align-items: flex-start;
+			background: rgba(249,249,249,0.8);
+			margin: 0px;
+			padding: 0px;
+		}
+		
+
+		.text_content {
+			font-family: "Source Sans Pro", sans-serif;
+			font-size: 1.1em;
+			line-height:1.5em;
+			font-weight: 300;
+			padding: 10px 50px 10px 50px;
+			margin: 0px;
+			box-sizing: border-box;
+				-moz-box-sizing: border-box;
+				-webkit-box-sizing: border-box;
+		}
+		
+		.screenshot {
+			max-width: 100%;
+		}
+		
+		.screenshot_half {
+			max-width: 40%;
+			text-align: center;
+		}
+		
+		.section_header {
+			font-family: "Crimson Text", serif;
+			width: 100%;
+			padding: 5px 25px 5px 25px;
+			margin: 0px;
+			text-transform: lowercase;
+			font-variant: small-caps;
+			font-size: 2.0em;
+			letter-spacing: 2px;
+			box-sizing: border-box;
+				-moz-box-sizing: border-box;
+				-webkit-box-sizing: border-box;
+		}
+
+		#title {
+			font-family: "Crimson Text", serif;
+			font-size: 3.0em;	
+			line-height: 1.2em;
+			margin: 0px;
+			padding: 0px;
+			color: burlywood;
+			text-align: center;
+			text-transform: lowercase;
+			font-variant: small-caps;
+			letter-spacing: 0.2em;
+		}
+		
+		#subtitle {
+			font-family: "Crimson Text", serif;
+			font-size: 1.2em;	
+			line-height: 1.0em;
+			margin: 0px;
+			padding: 0px;
+			color: burlywood;
+			text-align: center;
+		}
+
+		
+		a:link, a:visited {
+			text-decoration: none;
+			color: #B20000;
+		}
+	
+		a:hover {
+			text-decoration: underline;
+		}
+
+		.pitchLabel {
+			font-family: Helvetica,Arial, sans-serif;
+			font-size:0.8em;
+			text-anchor: middle;
+			dominant-baseline: middle;
+		}
+
+		.voicingLabel {
+			font-family: Helvetica,Arial, sans-serif;
+			font-size:1.0em;
+			dominant-baseline: middle;
+		}
+
+		.keyText {
+			font-family: Helvetica,Arial, sans-serif;
+			font-size:0.8em;
+			text-anchor: start;
+			dominant-baseline: middle;
+		}
+
+		.axis {
+			font-family: Helvetica,Arial, sans-serif;
+			font-size:0.8em;
+		}
+
+		.axis path,
+		.axis line {
+			fill: none;
+			stroke: #000;
+			shape-rendering: crispEdges;
+		}
+
+		.loading {
+			z-index: 500;
+			position: relative;
+			left: 50%;
+			top: 300px;
+			margin: -33px 0px 0px -33px;
+		}
+	</style>
+	
+	<script>
+		
+	$(document).ready(function() {
+		
+			//////////////////////////////////////////////////////////////////////////////////
+			//// DEFINE FUNCTION PROTOTYPES
+
+			// Move element to front and back -- see http://bl.ocks.org/eesur/4e0a69d57d3bfc8a82c2	
+			// https://github.com/wbkd/d3-extended
+			d3.selection.prototype.moveToFront = function() {  
+			  return this.each(function(){
+				this.parentNode.appendChild(this);
+			  });
+			};	
+
+			d3.selection.prototype.moveToBack = function() {  
+				return this.each(function() { 
+					firstChild = this.parentNode.firstChild; 
+					if (firstChild) { 
+						this.parentNode.insertBefore(this, firstChild); 
+					} 
+				});
+			};	
+	
+			// See http://stackoverflow.com/questions/38224875/replacing-d3-transform-in-d3-v4
+			function getTranslation(transform) {
+				// Create a dummy g for calculation purposes only. This will never
+				// be appended to the DOM and will be discarded once this function 
+				// returns.
+				var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+				// Set the transform attribute to the provided string value.
+				g.setAttributeNS(null, "transform", transform);
+
+				// consolidate the SVGTransformList containing all transformations
+				// to a single SVGTransform of type SVG_TRANSFORM_MATRIX and get
+				// its SVGMatrix. 
+				var matrix = g.transform.baseVal.consolidate().matrix;
+
+				// As per definition values e and f are the ones for the translation.
+				return [matrix.e, matrix.f];
+			}					
+
+			//////////////////////////////////////////////////////////////////////////////////
+			//// LOAD DATA
+
+			// Define data handles
+			songs = {"sia_elastic-heart_praat": {"color": "#233E9E", "label": "(Sia) Elastic Heart"}, // dark blue
+					  "sia_chandelier_praat": {"color": "#9E2623", "label": "(Sia) Chandelier"}, // dark red
+					  "sia_big-girls-cry_praat": {"color": "#0D7C3F", "label": "(Sia) Big Girls Cry"}, // dark green
+					  "sia_free-the-animal_praat": {"color": "#7C0D5C", "label": "(Sia) Free the Animal"}, // dark purple
+					  "sia_alive_praat": {"color": "#3D3D3D", "label": "(Sia) Alive"}, // dark gray
+					  "adele_someone-like-you_praat": {"color": "#F6C900", "label": "(Adele) Someone Like You"}, // gold
+					  "adele_send-my-love_praat": {"color": "#C91797", "label": "(Adele) Send My Love"}, // pink
+					  "adele_rolling-in-the-deep_praat": {"color": "#B5A64E", "label": "(Adele) Rolling in the Deep"}}; // mustard yellow
+			
+			q = d3.queue();
+			for(var file in songs) {
+				q.defer(d3.csv, "csv_data/" + file + ".csv");
+
+			}
+
+			q.awaitAll(function(error,filedata) {
+
+				// Let page load first, and then render SVG
+				setTimeout(function() {
+
+					var data = {};
+					var max_diff = 0;
+					var min_diff = 1000;
+					filedata.forEach(function(d,i) {
+						var reduced_data = [];
+						
+						d.forEach(function(dd,j) {
+						
+							if(dd.pitch >= 116 && dd.pitch <= 494) {
+								reduced_data.push(dd);
+								if(dd.f2 - dd.f1 > max_diff) {
+									max_diff = dd.f2 - dd.f1;
+								}
+								if(dd.f2 - dd.f1 < min_diff) {
+									min_diff = dd.f2 - dd.f1;
+								}
+							}
+						});
+						data[Object.keys(songs)[i]] = reduced_data;
+					});
+
+					// Pitches from http://www.liutaiomottola.com/formulae/freqtab.htm
+					pitches = {"116.541":	"A# / Bb 2",
+					"123.471":	"B 2", 
+					"130.813":	"C 3",
+					"138.591":	"C# / Db 3",
+					"146.832":	"D 3",
+					"155.563":	"D# / Eb 3",
+					"164.814":	"E 3",
+					"174.614":	"F 3",
+					"184.997":	"F# / Gb 3",
+					"195.998":	"G 3",
+					"207.652":	"G# / Ab 3",
+					"220.0":	"A 3",
+					"233.082":	"A# / Bb 3",
+					"246.942":	"B 3",	 
+					"261.626":	"C 4",
+					"277.183":	"C# / Db 4",
+					"293.665":	"D 4",
+					"311.127":	"D# / Eb 4",
+					"329.628":	"E 4",
+					"349.228":	"F 4",
+					"369.994":	"F# / Gb 4",
+					"391.995":	"G 4",
+					"415.305":	"G# / Ab 4",
+					"440.0":	"A 4",
+					"466.164":	"A# / Bb 4",
+					"493.883":	"B 4"
+					};
+
+
+					//////////////////////////////////////////////////////////////////////////////////
+					//// CREATE MAIN VISUALIZATION
+		
+					// Specify namespace
+					var main = {};
+		
+					// Define SVG dimensions for top visualization (main)
+					main.width = $("#vis_container").innerWidth();
+					main.height = $("#vis_container").innerHeight();
+					main.margin = {top: 50, left: 50, right: 50, bottom: 50};
+
+					// Define scales
+					main.rScale = d3.scalePow()
+						.exponent(2)
+						.domain([min_diff,max_diff])
+						.range([0,10]); // larger difference = front, smaller difference = back
+				
+					main.opacityScale = d3.scaleLinear()
+						.domain([min_diff,max_diff])
+						.range([0,1]); // larger difference = front, smaller difference = back
+
+					main.widthScale = d3.scaleLinear()
+						.domain([0,2500])
+						.range([50,main.width/2 - main.margin.left - main.margin.right]); // larger difference = front, smaller difference = back
+
+					var numPitches = Object.keys(pitches).length;
+					var pitchRange = [];
+					Object.keys(pitches).forEach(function(p) {
+						pitchRange.push(Number(p));
+					});
+			
+					main.pitchScale = d3.scaleLog()
+						.base(10)
+						.domain([Number(Object.keys(pitches)[0]),Number(Object.keys(pitches)[numPitches-1])])
+						.range([main.height-main.margin.bottom, main.margin.top]);
+
+	
+					main.pitchMappings = d3.scaleQuantize()
+						.domain([Number(Object.keys(pitches)[0]),Number(Object.keys(pitches)[numPitches-1])])
+						.range(pitchRange.map(function(d) { return Math.log10(d); }));
+
+
+					main.pitchLabels = d3.scalePoint()
+						.domain(Object.keys(pitches))
+						.range([main.height-main.margin.bottom, main.margin.top]);
+			
+
+					// Initialize SVG
+					main.svg = d3.select("#vis_container").append("svg")
+						.attr("id","main_svg")
+						.attr("width", main.width)
+						.attr("height", main.height)
+							.append("g")
+							.attr("transform","translate(" + main.margin.left + ",0)");
+
+					// Draw vertical pitch axis
+					for(var freq in pitches) {
+						main.svg.append("text")
+							.attr("class","pitchLabel")
+							.attr("id", "pitch_" + Math.round(freq))
+							.attr("x", main.width/2 - main.margin.right)
+							.attr("y", main.pitchScale(Number(freq)))
+							.text(pitches[freq]);
+					}
+			
+					// Build arrow marker and create horizontal close/open axis
+					main.svg.append("svg:defs").append("svg:marker")
+						.attr("id", "triangle")
+						.attr("refX", 6)
+						.attr("refY", 6)
+						.attr("markerWidth", 30)
+						.attr("markerHeight", 30)
+						.attr("orient", "auto")
+						.append("path")
+						.attr("d", "M 0 0 12 6 0 12 3 6")
+						.style("fill", "black");
+
+				   main.svg.append("line")
+						.attr("x1",  main.width/2 - main.margin.right - 100)
+						.attr("y1", main.height - main.margin.bottom + 25)
+						.attr("x2", main.margin.left + 100)
+						.attr("y2", main.height - main.margin.bottom + 25)
+						.attr("stroke-width", 1)
+						.attr("stroke", "black")
+						.attr("marker-end", "url(#triangle)");
+
+				   main.svg.append("line")
+						.attr("x1",  main.width/2 - main.margin.right + 100)
+						.attr("y1", main.height - main.margin.bottom + 25)
+						.attr("x2", main.width - 2*main.margin.right - main.margin.left - 100)
+						.attr("y2", main.height - main.margin.bottom + 25)
+						.attr("stroke-width", 1)
+						.attr("stroke", "black")
+						.attr("marker-end", "url(#triangle)");
+			
+					main.svg.append("text")
+						.attr("class","voicingLabel")
+						.attr("x", main.margin.left)
+						.attr("y", main.height - main.margin.bottom + 25)
+						.style("text-anchor","start")
+						.text("open");
+
+					main.svg.append("text")
+						.attr("class","voicingLabel")
+						.attr("x", main.width/2 - main.margin.right)
+						.attr("y", main.height - main.margin.bottom + 25)
+						.style("text-anchor","middle")
+						.text("close");
+
+					main.svg.append("text")
+						.attr("class","voicingLabel")
+						.attr("x", main.width - 2*main.margin.right - main.margin.left)
+						.attr("y", main.height - main.margin.bottom + 25)
+						.style("text-anchor","end")
+						.text("open");
+
+					// Draw data points
+					for(var file in data) {
+			
+						main.formants = main.svg.selectAll(".formant_group_" + file)
+							.data(data[file])
+							.enter()
+							.append("g")
+								.attr("class", "formant_group")
+								.classed("formant_group_" + file,true)
+								.attr("id",function(d,i) { return file + "_" + i; })
+								.attr("transform", function(d) {
+									var tx = main.width/2-main.margin.right;
+									var ty = main.pitchScale(d.pitch);
+									return "translate(" + tx + "," + ty + ")";
+								});
+
+
+						// Draw circles
+						main.formants.append("circle")
+							.attr("class","right")
+							.attr("cy",0)
+							.attr("cx", function(d) { return main.widthScale(d.f1); })
+							.attr("r", function(d) { return main.rScale((d.f2 - d.f1)); })
+							.attr("opacity", function(d) { return main.opacityScale((d.f2 - d.f1)); })
+							.attr("fill", songs[file]["color"]);
+
+
+						main.formants.append("circle")
+							.attr("class","left")
+							.attr("cy",0)
+							.attr("cx", function(d) { return -1*main.widthScale(d.f1); })
+							.attr("r", function(d) { return main.rScale((d.f2 - d.f1)); })
+							.attr("opacity", function(d) { return main.opacityScale((d.f2 - d.f1)); })
+							.attr("fill", songs[file]["color"]);
+
+
+					}
+
+
+					//////////////////////////////////////////////////////////////////////////////////
+					//// CREATE NAVIGATION
+
+					var nav = {};
+					// Selector for navigation function
+					selected = null;
+					selectAll = false;
+					
+					for(var song in songs) {
+						var colorGroup = d3.select("#nav_container").append("div")
+							.attr("class","nav_item")
+							.append("svg")
+							.attr("width",200)
+							.attr("height",$("#nav_container").innerHeight());
+						
+						var colorGroup_g = colorGroup.append("g")
+							.data([{file: song}])
+							.attr("class","colorGroup")
+							.attr("id","colorGroup_" + song)
+							.style("cursor","pointer")
+							.attr("transform","translate(0," + ($("#nav_container").innerHeight()/2-10) + ")");
+
+						colorGroup_g.append("rect")
+							.attr("x", 0)
+							.attr("y", 0)
+							.attr("width",20)
+							.attr("height",20)
+							.attr("fill", songs[song]["color"]);
+					
+						colorGroup_g.append("text")
+							.attr("x",30)
+							.attr("y",10)
+							.attr("class","keyText")
+							.text(songs[song]["label"]);
+				
+						colorGroup_g.on("click", function(d) { 
+							click(d); 
+						});
+					}
+
+					function click(d) {
+
+						if(d.file !== selected || selectAll == true) {
+							selected = d.file;
+							selectAll = false;
+							d3.selectAll(".colorGroup").attr("opacity",0.2);
+							d3.select("#colorGroup_" + d.file).attr("opacity",1);
+						
+							d3.selectAll(".formant_group")
+								.attr("opacity",0.02);
+	
+							d3.selectAll(".formant_group_" + d.file)
+								.attr("opacity",1);
+		
+							var pitchData = {};
+							var maxCount = 0;
+							for(var i = 0; i < pitchRange.length-1; i++) {
+								var lowerPitch = pitchRange[i];
+								var upperPitch = pitchRange[i+1];
+								if(i == 0) {
+									pitchData[lowerPitch] = [];
+								}
+								pitchData[upperPitch] = [];
+								data[d.file].forEach(function(dd) {
+									if(dd.pitch >= lowerPitch && dd.pitch <= upperPitch) {
+										pitchData[upperPitch].push(dd.pitch);
+
+									}	
+								});
+								if(i == 0) {
+									pitchData[lowerPitch] = pitchData[upperPitch];
+								}
+							
+								if(pitchData[upperPitch].length > maxCount) {
+									maxCount = pitchData[upperPitch].length;
+								}
+							}	
+
+							var pitchColorScale = d3.scaleLinear()
+								.domain([0, maxCount])
+								.range(["#FEFEFE","#B20000"]);
+		
+							for(var pitch in pitchData) {
+								d3.select("#pitch_" + Math.round(pitch))
+									.attr("fill",pitchColorScale(pitchData[pitch].length));
+							}
+						
+							updateSubVisualization(d.file);
+						
+						} else {
+							d3.selectAll(".colorGroup").attr("opacity",1);
+					
+							d3.selectAll(".formant_group")
+								.attr("opacity",1);
+							d3.selectAll(".pitchLabel")
+								.attr("fill","#000000");
+							
+							selected = d.file;
+							selectAll = true;
+
+						}
+	
+					}
+
+					//////////////////////////////////////////////////////////////////////////////////
+					//// CREATE SECONDARY VISUALIZATION
+		
+					// Specify namespace
+		
+					var sub = {};
+					var subdata = data["sia_elastic-heart_praat"];
+
+					sub.width = $("#subvis_container").innerWidth()*10;
+					sub.height = $("#subvis_container").innerHeight();
+					sub.margin = {top: 25, left: 50, right: 25, bottom: 70};
+
+
+					// Define scales
+					sub.rScale = d3.scalePow()
+						.exponent(2)
+						.domain([min_diff,max_diff])
+						.range([0,20]); // larger difference = front, smaller difference = back
+				
+
+					sub.opacityScale = d3.scaleLinear()
+						.domain([min_diff,max_diff])
+						.range([0,1]); // larger difference = front, smaller difference = back
+
+					sub.colorScale = d3.scaleLinear()
+						.domain([min_diff,max_diff])
+						.range(["red","green"]);
+
+					sub.widthScale = d3.scaleLinear()
+						.domain([min_diff,max_diff])
+						.range([0,75]); // larger difference = front, smaller difference = back
+
+				
+					sub.lineUpper = d3.area()
+						.x(function(d) { return sub.x(d.time); })
+						.y0(function() { return sub.height-sub.margin.bottom; })
+						.y1(function(d) { return sub.pitchScale(Number(d.pitch)) - sub.widthScale(d.f1); })
+						.curve(d3.curveBasisOpen);
+
+					sub.lineLower = d3.area()
+						.x(function(d) { return sub.x(d.time); })
+						.y0(function() { return sub.height-sub.margin.bottom; })
+						.y1(function(d) { return sub.pitchScale(Number(d.pitch)) + sub.widthScale(d.f1); })
+						.curve(d3.curveBasisOpen);
+				
+						
+					sub.pitchScale = d3.scaleLog()
+						.base(10)
+						.domain([Number(Object.keys(pitches)[0]),Number(Object.keys(pitches)[numPitches-1])])
+						.range([sub.height-sub.margin.bottom, sub.margin.top]);
+
+	
+
+					sub.pitchLabels = d3.scalePoint()
+						.domain(Object.keys(pitches))
+						.range([sub.height-sub.margin.bottom, sub.margin.top]);
+			
+				
+					// Initialize secondary SVG
+					sub.svg = d3.select("#subvis_container").append("svg")
+						.attr("id","sub_svg")
+						.attr("width", sub.width)
+						.attr("height", sub.height)
+							.append("g");
+				
+					// Create function to update contents of secondary SVG
+					function updateSubVisualization(file) {
+
+						subdata = data[file];
+					
+						sub.x = d3.scaleLinear()
+							.domain([Number(subdata[0]["time"]),Number(subdata[subdata.length-1]["time"])])
+							.range([sub.margin.left, sub.width-sub.margin.right]);
+
+						// Remove old elements
+						sub.svg.selectAll("path").remove();
+						sub.svg.selectAll(".i_circle").remove();
+						sub.svg.selectAll(".axis").remove();
+						sub.svg.selectAll(".pitchLabel").remove();
+						sub.svg.selectAll(".pitchLine").remove();
+						
+						// Create subsampled array of data
+						var sublinedata = [];
+						subdata.forEach(function(d,i) {
+							if(i % 10 == 0) {
+								sublinedata.push(d);
+							}
+						});
+					
+								
+						// Draw formant band
+						sub.svg.append("path")
+							.datum(sublinedata)
+							.attr("stroke","#F6C900")
+							.attr("stroke-width",0)
+							.attr("fill","#CECECE")
+							.attr("d", sub.lineUpper);
+							
+						sub.svg.append("path")
+							.datum(sublinedata)
+							.attr("stroke","#F6C900")
+							.attr("stroke-width",0)
+							.attr("fill","#FFFFFF")
+							.attr("d", sub.lineLower);
+
+
+						// Draw data points
+						sub.svg.selectAll(".i_circle")
+							.data(subdata)
+							.enter()
+							.append("circle")
+								.attr("class","i_circle")
+								.attr("cx", function(d) { return sub.x(d.time); })
+								.attr("cy", function(d) { return sub.pitchScale(d.pitch); })
+								.attr("r", function(d) { return sub.rScale(d.f2 - d.f1); })
+								.attr("fill", songs[file]["color"]);
+	
+						// Create pitch lines
+						sub.pitches = {
+							"130.813":	"C 3",
+							"164.814":	"E 3",
+							"195.998":	"G 3",
+							"261.626":	"C 4",
+							"329.628":	"E 4",
+							"391.995":	"G 4"};
+						
+						for(var pitch in sub.pitches) {
+							sub.svg.append("line")
+								.attr("class","pitchLine")
+								.attr("x1", sub.margin.left)
+								.attr("y1", sub.pitchScale(pitch))
+								.attr("x2", sub.width - sub.margin.right)
+								.attr("y2", sub.pitchScale(pitch))
+								.attr("stroke-width",2)
+								.attr("stroke","#CCCCCC")
+								.attr("opacity",0.4);
+						
+							sub.svg.append("text")
+								.attr("class","pitchLabel")
+								.attr("x", 25)
+								.attr("y", sub.pitchScale(pitch))
+								.text(sub.pitches[pitch]);
+							
+						}
+
+						// Create time bottom axis
+						sub.svg.append("g")
+							.attr("class", "axis")
+							.attr("transform", "translate(0," + (sub.height - sub.margin.bottom + 25) + ")")
+							.call(d3.axisBottom(sub.x).ticks(40).tickFormat(function(d) {
+								var s = d % 60;
+								var m = Math.floor(d/60);
+								return m + "' " + s + "\"";
+							})	);				
+					
+						// Retrieve lyrics
+						$("#lyrics_container").load("lyrics/" + file.replace("_praat","") + ".txt")
+
+				}
+			
+				// Initialize secondary SVG with Elastic Heart
+				updateSubVisualization("sia_elastic-heart_praat");
+			
+				// Remove loader gif
+				$("#vis_container .loading").remove();
+
+			}, 2000); // wait 2 seconds before generating SVG
+			
+		}); // end d3.queue()
+				
+}); // end $(document).ready()
+	
+	
+	</script>
+</head>
+
+<body>
+<div id="wrapper">
+
+<div id="header">
+	<div id="title">Throat Tones</div>
+	<div id="subtitle">Vowels and Pitch in the Music of Sia and Adele</div>
+</div>
+<div class="content_container">
+	<div class="text_content">
+	The timbre of a singer's voice is determined by many psychoacoustic factors. Some of these are created in the mind via the process of perception, such as the loudness or texture of a sound. But others are physical features that can be measured directly, independent of any psychoacoustic correlates. Trained singers are able to manipulate the timbre of their voice by changing these physical features, achieved primarily through changing the shape of their vocal tract. In this visualization, timbre is imagined as a product of two measurable features in particular: formant frequency, correlating with vowel and throat openness, and pitch frequency. Have you ever heard of a "close" vowel or an "open" one? Have you ever paid attention to the position of your tongue when you speak or sing? <b>Read more and click the labels for tracks below to see clusters in pitch and formants in the music of Sia and Adele.</b> (Data may take a few seconds to finish loading.)
+	</div>
+</div>
+<div id="vis_container">
+	<div class="loading"><img src="inc/data-loading.gif"></div>
+</div>
+<div id="nav_container"></div>
+<div id="subvis_container"></div>
+<div id="lyrics_container"></div>
+<div class="content_container">
+	<div class="section_header">The Linguistics of Singing</div>
+	<div class="text_content">
+	In linguistics, it is possible to measure the relative position of the tongue by the overtone frequencies produced in voicing a sound. The most intense of these overtones are called "formants," and they correspond to distinct vowels in human language. Some vowels are called "close," which means that the position of the tongue is high in the mouth, producing a more closed passage for air to flow through the vocal tract. Some examples of close vowels include monopthongs in the words <b>hit</b>, <b>cut</b>, and <b>bet</b>. Conversely, a vowel is called "open" when it corresponds to a low position of the tongue in the mouth, such as is the case with monophthongs in <b>bowl</b>, <b>hot</b>, and <b>make</b>. If you try voicing these sounds yourself, pay attention to where your tongue sits with each vowel.
+	</div>
+	<div class="text_content">
+	Professional singers are trained to carefully control the voicing of vowels as they sing, but formant values vary from person to person due to differences in body size and shape of the vocal tract. The result is great diversity in the range of sounds that trained singers can produce with their voice, giving rise to the impressions of timbral similarity and difference we perceive among artists. Here, such similarities and differences are explored in the music of Sia and Adele, both artists who have achieved international success in their careers. Both Sia and Adele have similar vocal ranges and timbral qualities, making it easy to see how they compare in the ways they manipulate their voice to achieve different musical effects.
+	</div>
+	<div class="section_header">Reading the Visualization</div>
+	<div class="text_content">
+	In this visualization, data about formant and pitch frequency were sampled at 0.05s intervals for 5 songs performed by Sia and 3 performed by Adele. These songs are separated into color categories; within each color category, a single circle (point) represents the measured first formant (on the horizontal axis) and approximate pitch (on the vertical axis) for a given 0.05s slice of the respective song. Points that are further up vertically in the chart are higher in pitch, and points corresponding to sounds that are more "close" &mdash; that is, vowel voicings where the vocal tract is constricted and the body of the tongue is high in the mouth &mdash; are positioned closer to the center. The data are mirrored on each side to mimic this effect; more close voicings are represented by data points that are closer to the central axis, showing a constriction of the vocal tract, and more open voicings are represented by data points that are further away from the central axis, showing a more open vocal tract. There are also differences in circle sizes, which correspond to subtractive differences in the first two formants for each continuously sampled sound. Voicings with large differences between their first two formants are said to be more "front," meaning the position of the tongue is further forward in the mouth, and voicings with small differences are said to be more "back," with the position of the tongue further back in the mouth. Here, large circles indicate more front voicings and small circles indicate more back voicings. With these dimensions, it is thus possible to see clusters around pitch, frontness/backness, and openness/closeness.
+	</div>
+	<div class="text_content">
+	As pitch increases, it becomes more difficult to sustain the voicing of close vowels. This is reflected in the visualization by the curving contours formed by the data points. At higher pitches, there are fewer close voicings and more open ones, producing precipitous dropoffs in clusters of data points. In addition to those oriented around pitch, there are also visible clusters within individual songs oriented around openness and closeness. For example, in Adele's "Someone Like You," a large cluster of close voicings is visible around the pitch range A3 &ndash; D4. <b>Click the labels for additional tracks to see other clusters of pitch and formants in the top visualization.</b>
+	</div>
+	<div class="text_content">
+	The bottom visualization shows the same data about formant and pitch frequencies for individual songs but in a different format. Here, pitch and formant frequencies are spread out horizontally along a time axis that spans the duration of each song. Each circle represents a data point, oriented horizontally by time in the song and vertically by pitch. The size of each circle indicates the relative subtractive difference between the first two formants of the respective sound slice; larger circles indicate larger differences and thus more front vowels, and smaller circles indicate smaller differences and vowels that are more back. The gray band shows the constriction of the vocal tract at each point; where the band becomes more narrow, close vowels dominate, meaning a constricted vocal tract (and higher position of the tongue in the mouth), and where the band widens, open vowels dominate, meaning a more open vocal tract (and lower position of the tongue in the mouth).
+	</div>
+	<div class="section_header">About the Data</div>
+	<div class="text_content">
+	In this analysis, the computational phonetics software <a target="_blank" href="www.fon.hum.uva.nl/praat/">Praat</a> was used to determine the first two formants and pitch for each sound slice at 0.05s time intervals throughout the listed songs by Sia and Adele. Where possible, only versions of each song with isolated vocals were used in order to minimize contributions from instrumental counterparts. However, where this was not possible, some data may include information about pitch and formants that is attributable to non-vocal elements in a song, thus skewing absolute values for both. Additionally, it is important to note that each song was sampled continuously at 0.05s intervals through its track, and thus individual data points do not necessarily correspond to individual syllables or lyrics in any given song. This means that some data points may be sampled at moments in tracks where there are no vocals at all.
+	</div>	
+	<div class="section_header">Acknowledgments</div>
+	<div class="text_content">
+	This visualization was created by <a target="_blank" href="http://www.stevengbraun.com">Steven Braun</a> using <a target="_blank" href="http://d3js.org">D3.js</a>. The full source for this visualization is <a target="_blank" href="http://www.github.com/braunsg/throat-tones">available on GitHub</a>. All tracks listed were analyzed for formant frequencies and pitch using <a target="_blank" href="www.fon.hum.uva.nl/praat/">Praat</a>. All songs presented here are copyrighted and owned by Sia, Adele, and their publishing record labels.
+	</div>
+
+</div>
+
+</div>
+
+</body>
+</html>
